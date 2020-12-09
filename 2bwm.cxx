@@ -15,15 +15,13 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
-#include "definitions.hxx"
-#include "list.hxx"
-#include "types.hxx"
 
 #include <X11/keysym.h>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <list>
 #include <unistd.h>
 #include <xcb/randr.h>
 #include <xcb/xcb_ewmh.h>
@@ -31,7 +29,131 @@
 #include <xcb/xcb_keysyms.h>
 #include <xcb/xcb_xrm.h>
 
+///---Types---///
+struct Monitor {
+	xcb_randr_output_t id;
+	int16_t y, x;           // X and Y.
+	uint16_t width, height; // Width/Height in pixels.
+	struct item* item;      // Pointer to our place in output list.
+};
+
+union Arg {
+	const char** com;
+	const uint32_t i;
+};
+
+struct Key {
+	unsigned int mod;
+	xcb_keysym_t keysym;
+	void (*func)(const Arg*);
+	const Arg arg;
+};
+
+struct Button {
+	unsigned int mask, button;
+	void (*func)(const Arg*);
+	const Arg arg;
+	const bool root_only;
+};
+
+struct Sizepos {
+	int16_t x, y;
+	uint16_t width, height;
+};
+
+struct Client {                  // Everything we know about a window.
+	xcb_drawable_t id;       // ID of this window.
+	bool usercoord;          // X,Y was set by -geom.
+	int16_t x, y;            // X/Y coordinate.
+	uint16_t width, height;  // Width,Height in pixels.
+	uint8_t depth;           // pixel depth
+	struct Sizepos origsize; // Original size if we're currently maxed.
+	uint16_t max_width, max_height, min_width, min_height, width_inc, height_inc, base_width,
+		base_height;
+	bool fixed, unkillable, vertmaxed, hormaxed, maxed, verthor, ignore_borders, iconic;
+	struct Monitor* monitor; // The physical output this window is on.
+	struct item* winitem;    // Pointer to our place in global windows list.
+	struct item* wsitem;     // Pointer to workspace window list.
+	int ws;                  // In which workspace this window belongs to.
+};
+
+struct Winconf { // Window configuration data.
+	int16_t x, y;
+	uint16_t width, height;
+	uint8_t stackmode;
+	xcb_window_t sibling;
+};
+
+struct Config {
+	int8_t borderwidth;  // Do we draw borders for non-focused window? If so, how large?
+	int8_t outer_border; // The size of the outer border
+	uint32_t focuscol, unfocuscol, fixedcol, unkillcol, empty_col, fixed_unkil_col,
+		outer_border_col;
+	bool inverted_colors;
+	bool enable_compton;
+};
+
 ///---Internal Constants---///
+#define WORKSPACES 10
+#define BUTTONMASK XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE
+#define NET_WM_FIXED                                                                               \
+	0xffffffff // Value in WM hint which means this window is fixed on all workspaces.
+#define TWOBWM_NOWS     0xfffffffe // This means we didn't get any window hint at all.
+#define LENGTH(x)       (sizeof(x) / sizeof(*x))
+#define MIN(X, Y)       ((X) < (Y) ? (X) : (Y))
+#define CLEANMASK(mask) (mask & ~(numlockmask | XCB_MOD_MASK_LOCK))
+#define CONTROL         XCB_MOD_MASK_CONTROL /* Control key */
+#define ALT             XCB_MOD_MASK_1       /* ALT key */
+#define SHIFT           XCB_MOD_MASK_SHIFT   /* Shift key */
+
+enum { TWOBWM_MOVE, TWOBWM_RESIZE };
+enum { TWOBWM_FOCUS_NEXT, TWOBWM_FOCUS_PREVIOUS };
+enum { TWOBWM_RESIZE_LEFT,
+       TWOBWM_RESIZE_DOWN,
+       TWOBWM_RESIZE_UP,
+       TWOBWM_RESIZE_RIGHT,
+       TWOBWM_RESIZE_LEFT_SLOW,
+       TWOBWM_RESIZE_DOWN_SLOW,
+       TWOBWM_RESIZE_UP_SLOW,
+       TWOBWM_RESIZE_RIGHT_SLOW };
+enum { TWOBWM_MOVE_LEFT,
+       TWOBWM_MOVE_DOWN,
+       TWOBWM_MOVE_UP,
+       TWOBWM_MOVE_RIGHT,
+       TWOBWM_MOVE_LEFT_SLOW,
+       TWOBWM_MOVE_DOWN_SLOW,
+       TWOBWM_MOVE_UP_SLOW,
+       TWOBWM_MOVE_RIGHT_SLOW };
+enum { TWOBWM_TELEPORT_CENTER_X,
+       TWOBWM_TELEPORT_TOP_RIGHT,
+       TWOBWM_TELEPORT_BOTTOM_RIGHT,
+       TWOBWM_TELEPORT_CENTER,
+       TWOBWM_TELEPORT_BOTTOM_LEFT,
+       TWOBWM_TELEPORT_TOP_LEFT,
+       TWOBWM_TELEPORT_CENTER_Y };
+enum { BOTTOM_RIGHT, BOTTOM_LEFT, TOP_RIGHT, TOP_LEFT, MIDDLE };
+enum { wm_delete_window, wm_change_state, NB_ATOMS };
+enum { TWOBWM_RESIZE_KEEP_ASPECT_GROW, TWOBWM_RESIZE_KEEP_ASPECT_SHRINK };
+enum { TWOBWM_MAXIMIZE_HORIZONTALLY, TWOBWM_MAXIMIZE_VERTICALLY };
+enum { TWOBWM_MAXHALF_FOLD_HORIZONTAL,
+       TWOBWM_MAXHALF_UNFOLD_HORIZONTAL,
+       TWOBWM_MAXHALF_HORIZONTAL_TOP,
+       TWOBWM_MAXHALF_HORIZONTAL_BOTTOM,
+       MAXHALF_UNUSED,
+       TWOBWM_MAXHALF_VERTICAL_RIGHT,
+       TWOBWM_MAXHALF_VERTICAL_LEFT,
+       TWOBWM_MAXHALF_UNFOLD_VERTICAL,
+       TWOBWM_MAXHALF_FOLD_VERTICAL };
+enum { TWOBWM_PREVIOUS_SCREEN, TWOBWM_NEXT_SCREEN };
+enum { TWOBWM_CURSOR_UP,
+       TWOBWM_CURSOR_DOWN,
+       TWOBWM_CURSOR_RIGHT,
+       TWOBWM_CURSOR_LEFT,
+       TWOBWM_CURSOR_UP_SLOW,
+       TWOBWM_CURSOR_DOWN_SLOW,
+       TWOBWM_CURSOR_RIGHT_SLOW,
+       TWOBWM_CURSOR_LEFT_SLOW };
+
 ///---Globals---///
 static Config conf;
 static xcb_generic_event_t* ev = nullptr;

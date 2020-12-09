@@ -62,7 +62,6 @@ target_sources(2bwm PRIVATE
 	2bwm.cxx
 	list.hxx
 	config.hxx
-	types.hxx
 )
 
 target_sources(hidden PRIVATE
