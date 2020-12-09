@@ -1,5 +1,4 @@
 #include <xcb/randr.h>
-#include <stdbool.h>
 
 ///---Types---///
 struct monitor {

@@ -15,16 +15,15 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
-#include "definitions.h"
-#include "list.h"
-#include "types.h"
+#include "definitions.hxx"
+#include "list.hxx"
+#include "types.hxx"
 
 #include <X11/keysym.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <csignal>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <unistd.h>
 #include <xcb/randr.h>
 #include <xcb/xcb_ewmh.h>
@@ -156,7 +155,7 @@ static void getmonsize(int8_t, int16_t*, int16_t*, uint16_t*, uint16_t*, const s
 static void noborder(int16_t*, struct client*, bool);
 static void movepointerback(const int16_t, const int16_t, const struct client*);
 static void snapwindow(struct client*);
-#include "config.h"
+#include "config.hxx"
 
 ///---Function bodies---///
 void fix()

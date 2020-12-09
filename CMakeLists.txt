@@ -52,21 +52,21 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-add_executable(2bwm 2bwm.c)
-add_executable(hidden hidden.c)
+add_executable(2bwm 2bwm.cxx)
+add_executable(hidden hidden.cxx)
 
 install(TARGETS 2bwm DESTINATION ${BINDIR})
 install(TARGETS hidden DESTINATION ${BINDIR})
 
 target_sources(2bwm PRIVATE
-	2bwm.c
-	list.h
-	config.h
-	types.h
+	2bwm.cxx
+	list.hxx
+	config.hxx
+	types.hxx
 )
 
 target_sources(hidden PRIVATE
-	hidden.c
+	hidden.cxx
 )
 
 target_include_directories(2bwm SYSTEM PUBLIC ${X11_INCLUDE_DIR} ${X11_Xrandr_INCLUDE_PATH})

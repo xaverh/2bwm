@@ -17,11 +17,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <getopt.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
 
@@ -132,7 +131,7 @@ int findhidden(void)
 					 */
 					cookie = xcb_icccm_get_wm_icon_name(conn, children[i]);
 					rc = xcb_icccm_get_wm_icon_name_reply(conn, cookie, &prop,
-										  &error);
+									      &error);
 				}
 
 				if (1 == rc) {
@@ -150,9 +149,9 @@ int findhidden(void)
 				if (printcommand) {
 					/* FIXME: Need to escape : in prop.name. */
 					printf("'%s':'xdotool windowactivate 0x%x windowraise "
-						   "0x%x'\n",
-						   (1 == rc) ? prop.name : "(unamed)", children[i],
-						   children[i]);
+					       "0x%x'\n",
+					       (1 == rc) ? prop.name : "(unamed)", children[i],
+					       children[i]);
 				} else {
 					puts((1 == rc) ? prop.name : "(unamed)");
 				}
