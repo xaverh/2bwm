@@ -1,3 +1,6 @@
 2bwm
 2bwm.o
 hidden
+CMakeFiles
+cmake_install.cmake
+CMakeCache.txt
