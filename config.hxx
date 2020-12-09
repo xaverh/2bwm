@@ -44,7 +44,7 @@ static const uint8_t borders[] = {3, 5, 5, 4};
 #define LOOK_INTO "WM_NAME"
 static const char* ignore_names[] = {"bar", "xclock"};
 ///--Menus and Programs---///
-static const char* menucmd[] = {"", NULL};
+static const char* menucmd[] = {"", nullptr};
 ///--Custom foo---///
 static void halfandcentered(const Arg* arg)
 {
@@ -59,12 +59,12 @@ static void halfandcentered(const Arg* arg)
  * The strings "Sloppy" and "Click" will be passed as the last argument
  * If NULL this is ignored
  */
-static const char* sloppy_switch_cmd[] = {NULL};
+static const char* sloppy_switch_cmd[] = {nullptr};
 // static const char *sloppy_switch_cmd[] = { "notify-send", "toggle sloppy", NULL };
 static void toggle_sloppy(const Arg* arg)
 {
 	is_sloppy = !is_sloppy;
-	if (arg->com != NULL && LENGTH(arg->com) > 0) { start(arg); }
+	if (arg->com != nullptr && LENGTH(arg->com) > 0) { start(arg); }
 }
 ///---Shortcuts---///
 /* Check /usr/include/X11/keysymdef.h for the list of all keys

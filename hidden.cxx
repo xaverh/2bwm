@@ -33,14 +33,14 @@ xcb_atom_t wm_icon_name;
 bool printcommand = false;
 bool iconname = false;
 
-static uint32_t get_wm_state(xcb_drawable_t win);
-static int findhidden(void);
-static void init(void);
-static void cleanup(void);
-static xcb_atom_t getatom(char* atom_name);
-static void printhelp(void);
+static auto get_wm_state(xcb_drawable_t win) -> uint32_t;
+static auto findhidden() -> int;
+static void init();
+static void cleanup();
+static auto getatom(char* atom_name) -> xcb_atom_t;
+static void printhelp();
 
-uint32_t get_wm_state(xcb_drawable_t win)
+auto get_wm_state(xcb_drawable_t win) -> uint32_t
 {
 	xcb_get_property_reply_t* reply;
 	xcb_get_property_cookie_t cookie;
@@ -49,8 +49,8 @@ uint32_t get_wm_state(xcb_drawable_t win)
 
 	cookie = xcb_get_property(conn, false, win, wm_state, wm_state, 0, sizeof(int32_t));
 
-	reply = xcb_get_property_reply(conn, cookie, NULL);
-	if (NULL == reply) {
+	reply = xcb_get_property_reply(conn, cookie, nullptr);
+	if (nullptr == reply) {
 		fprintf(stderr, "mcwm: Couldn't get properties for win %d\n", win);
 		return -1;
 	}
@@ -70,7 +70,7 @@ bad:
  * List all hidden windows.
  *
  */
-int findhidden(void)
+auto findhidden() -> int
 {
 	xcb_query_tree_reply_t* reply;
 	int i;
@@ -83,8 +83,8 @@ int findhidden(void)
 	xcb_generic_error_t* error;
 
 	/* Get all children. */
-	reply = xcb_query_tree_reply(conn, xcb_query_tree(conn, screen->root), 0);
-	if (NULL == reply) { return -1; }
+	reply = xcb_query_tree_reply(conn, xcb_query_tree(conn, screen->root), nullptr);
+	if (nullptr == reply) { return -1; }
 
 	len = xcb_query_tree_children_length(reply);
 	children = xcb_query_tree_children(reply);
@@ -92,7 +92,7 @@ int findhidden(void)
 	/* List all hidden windows on this root. */
 	for (i = 0; i < len; i++) {
 		attr = xcb_get_window_attributes_reply(
-			conn, xcb_get_window_attributes(conn, children[i]), NULL);
+			conn, xcb_get_window_attributes(conn, children[i]), nullptr);
 
 		if (!attr) {
 			fprintf(stderr, "Couldn't get attributes for window %d.", children[i]);
@@ -166,12 +166,12 @@ int findhidden(void)
 	return 0;
 }
 
-void init(void)
+void init()
 {
 	int scrno;
 	xcb_screen_iterator_t iter;
 
-	conn = xcb_connect(NULL, &scrno);
+	conn = xcb_connect(nullptr, &scrno);
 	if (!conn) {
 		fprintf(stderr, "can't connect to an X server\n");
 		exit(1);
@@ -190,7 +190,7 @@ void init(void)
 	}
 }
 
-void cleanup(void)
+void cleanup()
 {
 	xcb_disconnect(conn);
 }
@@ -198,15 +198,15 @@ void cleanup(void)
 /*
  * Get a defined atom from the X server.
  */
-xcb_atom_t getatom(char* atom_name)
+auto getatom(char* atom_name) -> xcb_atom_t
 {
 	xcb_intern_atom_cookie_t atom_cookie;
 	xcb_atom_t atom;
 	xcb_intern_atom_reply_t* rep;
 
 	atom_cookie = xcb_intern_atom(conn, 0, strlen(atom_name), atom_name);
-	rep = xcb_intern_atom_reply(conn, atom_cookie, NULL);
-	if (NULL != rep) {
+	rep = xcb_intern_atom_reply(conn, atom_cookie, nullptr);
+	if (nullptr != rep) {
 		atom = rep->atom;
 		free(rep);
 		return atom;
@@ -219,18 +219,18 @@ xcb_atom_t getatom(char* atom_name)
 	return 0;
 }
 
-void printhelp(void)
+void printhelp()
 {
 	printf("hidden: Usage: hidden [-c] [-i]\n");
 	printf("  -c print 9menu/xdotool compatible output.\n");
 	printf("  -i print icon name instead of window name.\n");
 }
 
-int main(int argc, char** argv)
+auto main(int argc, char** argv) -> int
 {
 	int ch; /* Option character */
 
-	while (1) {
+	while (true) {
 		ch = getopt(argc, argv, "ci");
 		if (-1 == ch) {
 			/* No more options, break out of while loop. */

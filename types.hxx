@@ -11,18 +11,28 @@ typedef union {
 	const char** com;
 	const uint32_t i;
 } Arg;
-typedef struct {
+using key = struct {
+
 	unsigned int mod;
+
 	xcb_keysym_t keysym;
+
 	void (*func)(const Arg*);
+
 	const Arg arg;
-} key;
-typedef struct {
+
+};
+using Button = struct {
+
 	unsigned int mask, button;
+
 	void (*func)(const Arg*);
+
 	const Arg arg;
+
 	const bool root_only;
-} Button;
+
+};
 struct sizepos {
 	int16_t x, y;
 	uint16_t width, height;
