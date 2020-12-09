@@ -48,7 +48,7 @@ endfunction()
 
 querylib(WITH_XRM "pkg-config" xcb-xrm libs dirs)
 
-add_compile_options(-Wall -Wextra -Wpedantic)
+add_compile_options(-Wall -Wextra -Wpedantic -fpermissive)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 

@@ -6,6 +6,7 @@ struct item {
 	struct item* prev;
 	struct item* next;
 };
+
 void movetohead(struct item** mainlist, struct item* item)
 { // Move element in item to the head of list mainlist.
 	if (nullptr == item || nullptr == mainlist || nullptr == *mainlist) return;

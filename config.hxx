@@ -44,7 +44,7 @@ static const uint8_t borders[] = {3, 5, 5, 4};
 #define LOOK_INTO "WM_NAME"
 static const char* ignore_names[] = {"bar", "xclock"};
 ///--Menus and Programs---///
-static const char* menucmd[] = {"", nullptr};
+static const char* menucmd[] = {"dmenu_run", nullptr};
 ///--Custom foo---///
 static void halfandcentered(const Arg* arg)
 {
@@ -94,7 +94,7 @@ static void toggle_sloppy(const Arg* arg)
  */
 #define DESKTOPCHANGE(K, N)                                                                        \
 	{MOD, K, changeworkspace, {.i = N}}, {MOD | SHIFT, K, sendtoworkspace, {.i = N}},
-static key keys[] = {
+static Key keys[] = {
 	/* modifier           key            function           argument */
 	// Focus to next/previous window
 	{MOD, XK_Tab, focusnext, {.i = TWOBWM_FOCUS_NEXT}},
