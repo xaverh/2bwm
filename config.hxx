@@ -36,7 +36,7 @@ static const bool inverted_colors = true;
 /*0) Outer border size. If you put this negative it will be a square.
  *1) Full borderwidth    2) Magnet border size
  *3) Resize border size  */
-static const uint8_t borders[] = {3, 5, 5, 4};
+static const uint16_t borders[] = {3, 5, 5, 4};
 /* Windows that won't have a border.
  * It uses substring comparison with what is found in the WM_NAME
  * attribute of the window. You can test this using `xprop WM_NAME`
@@ -100,7 +100,7 @@ static Key keys[] = {
 	{MOD, XK_Tab, focusnext, {.i = TWOBWM_FOCUS_NEXT}},
 	{MOD | SHIFT, XK_Tab, focusnext, {.i = TWOBWM_FOCUS_PREVIOUS}},
 	// Kill a window
-	{MOD, XK_q, deletewin, {}},
+	{MOD, XK_q, reinterpret_cast<void (*)(const Arg*)>(deletewin), {}},
 	// Resize a window
 	{MOD | SHIFT, XK_k, resizestep, {.i = TWOBWM_RESIZE_UP}},
 	{MOD | SHIFT, XK_j, resizestep, {.i = TWOBWM_RESIZE_DOWN}},
@@ -168,21 +168,21 @@ static Key keys[] = {
 	{MOD, XK_comma, changescreen, {.i = TWOBWM_NEXT_SCREEN}},
 	{MOD, XK_period, changescreen, {.i = TWOBWM_PREVIOUS_SCREEN}},
 	// Raise or lower a window
-	{MOD, XK_r, raiseorlower, {}},
+	{MOD, XK_r, reinterpret_cast<void (*)(const Arg*)>(raiseorlower), {}},
 	// Next/Previous workspace
-	{MOD, XK_v, nextworkspace, {}},
-	{MOD, XK_c, prevworkspace, {}},
+	{MOD, XK_v, reinterpret_cast<void (*)(const Arg*)>(nextworkspace), {}},
+	{MOD, XK_c, reinterpret_cast<void (*)(const Arg*)>(prevworkspace), {}},
 	// Move to Next/Previous workspace
 	{MOD | SHIFT, XK_v, sendtonextworkspace, {}},
 	{MOD | SHIFT, XK_c, sendtoprevworkspace, {}},
 	// Iconify the window
-	{MOD, XK_i, hide, {}},
+	{MOD, XK_i, reinterpret_cast<void (*)(const Arg*)>(hide), {}},
 	// Make the window unkillable
-	{MOD, XK_a, unkillable, {}},
+	{MOD, XK_a, reinterpret_cast<void (*)(const Arg*)>(unkillable), {}},
 	// Make the window appear always on top
-	{MOD, XK_t, always_on_top, {}},
+	{MOD, XK_t, reinterpret_cast<void (*)(const Arg*)>(always_on_top), {}},
 	// Make the window stay on all workspaces
-	{MOD, XK_f, fix, {}},
+	{MOD, XK_f, reinterpret_cast<void (*)(const Arg*)>(fix), {}},
 	// Move the cursor
 	{MOD, XK_Up, cursor_move, {.i = TWOBWM_CURSOR_UP_SLOW}},
 	{MOD, XK_Down, cursor_move, {.i = TWOBWM_CURSOR_DOWN_SLOW}},
@@ -196,8 +196,8 @@ static Key keys[] = {
 	// Start programs
 	{MOD, XK_w, start, {.com = menucmd}},
 	// Exit or restart 2bwm
-	{MOD | CONTROL, XK_q, twobwm_exit, {.i = 0}},
-	{MOD | CONTROL, XK_r, twobwm_restart, {.i = 0}},
+	{MOD | CONTROL, XK_q, reinterpret_cast<void (*)(const Arg*)>(twobwm_exit), {.i = 0}},
+	{MOD | CONTROL, XK_r, reinterpret_cast<void (*)(const Arg*)>(twobwm_restart), {.i = 0}},
 	{MOD, XK_space, halfandcentered, {.i = 0}},
 	{MOD, XK_s, toggle_sloppy, {.com = sloppy_switch_cmd}},
 	// Change current workspace

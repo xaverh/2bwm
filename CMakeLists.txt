@@ -60,7 +60,6 @@ install(TARGETS hidden DESTINATION ${BINDIR})
 
 target_sources(2bwm PRIVATE
 	2bwm.cxx
-	list.hxx
 	config.hxx
 )
 
