@@ -89,7 +89,6 @@ struct Client {                       // Everything we know about a window.
 	bool fixed{false}, unkillable{false}, vertmaxed{false}, hormaxed{false}, maxed{false},
 		verthor{false}, ignore_borders{false}, iconic{false};
 	Monitor* monitor{nullptr}; // The physical output this window is on.
-	// struct item* winitem;    // Pointer to our place in global windows list.
 	// std::list<Client*>* wsitem; // Pointer to workspace window list.
 	size_t ws{SIZE_MAX}; // In which workspace this window belongs to.
 	bool operator==(const Client& b) const
@@ -220,7 +219,7 @@ void ewmh_deleter(xcb_ewmh_connection_t* e)
 	free(e);
 }
 std::unique_ptr<xcb_ewmh_connection_t, decltype(&ewmh_deleter)> ewmh{
-	nullptr, ewmh_deleter};    // Ewmh Connection.
+	nullptr, &ewmh_deleter};   // Ewmh Connection.
 xcb_screen_t* screen = nullptr;    // Our current screen.
 int randrbase = 0;                 // Beginning of RANDR extension events.
 static uint8_t curws = 0;          // Current workspace.
@@ -360,7 +359,7 @@ void focusnext(const Arg* arg)
 
 void delfromworkspace(Client* client)
 {
-	if (client->ws = SIZE_MAX) return;
+	if (client->ws == SIZE_MAX) return;
 	wslists[client->ws].remove(client);
 	client->ws = SIZE_MAX;
 }
@@ -593,7 +592,7 @@ void addtoworkspace(Client* client, size_t ws)
 				    XCB_ATOM_CARDINAL, 32, 1, &ws);
 }
 
-static void addtoclientlist(const xcb_drawable_t id)
+void addtoclientlist(const xcb_drawable_t id)
 {
 	xcb_change_property(conn, XCB_PROP_MODE_APPEND, screen->root, ewmh->_NET_CLIENT_LIST,
 			    XCB_ATOM_WINDOW, 32, 1, &id);
@@ -654,7 +653,7 @@ void always_on_top()
 /* Fix or unfix a window client from all workspaces. If setcolour is */
 void fixwindow(Client* client)
 {
-	uint32_t ws, ww;
+	uint32_t ww;
 
 	if (nullptr == client) return;
 
@@ -731,8 +730,6 @@ auto getcolor(const char* hex) -> uint32_t
 /* Forget everything about client client. */
 void forgetclient(Client* client)
 {
-	uint32_t ws;
-
 	if (nullptr == client) return;
 	if (client->id == top_win) top_win = 0;
 	/* Delete client from the workspace list it belongs to. */
@@ -745,14 +742,11 @@ void forgetclient(Client* client)
 /* Forget everything about a client with client->id win. */
 void forgetwin(xcb_window_t win)
 {
-	/* Find this window in the global window list. */
-	for (auto& item : winlist) {
-		/* Forget it and free allocated data, it might
-		 * already be freed by handling an UnmapNotify. */
-		forgetclient(&*std::find_if(winlist.begin(), winlist.end(),
-					    [win](Client tofind) { return win == tofind.id; }));
-		return;
-	}
+	// Find this window in the global window list. Forget it and free allocated data, it might
+	// already be freed by handling an UnmapNotify.
+	forgetclient(&*std::find_if(winlist.begin(), winlist.end(),
+				    [win](Client tofind) { return win == tofind.id; }));
+	return;
 }
 
 void getmonsize(int8_t with_offsets, int16_t* mon_x, int16_t* mon_y, uint16_t* mon_width,
@@ -950,13 +944,11 @@ auto setupwin(xcb_window_t win) -> Client*
 {
 	unsigned int i;
 	uint8_t result;
-	uint32_t values[2], ws;
+	uint32_t values[2];
 	xcb_atom_t a;
 	xcb_size_hints_t hints;
 	xcb_ewmh_get_atoms_reply_t win_type;
 	xcb_window_t prop;
-	struct item* item;
-	Client* client;
 	xcb_get_property_cookie_t cookie;
 
 	if (xcb_ewmh_get_wm_window_type_reply(ewmh.get(),
@@ -981,7 +973,8 @@ auto setupwin(xcb_window_t win) -> Client*
 	xcb_change_save_set(conn, XCB_SET_MODE_INSERT, win);
 
 	/* Remember window and store a few things about it. */
-	winlist.emplace_front(Client{win, screen->width_in_pixels, screen->height_in_pixels});
+	auto client = &winlist.emplace_front(
+		Client{win, screen->width_in_pixels, screen->height_in_pixels});
 
 	/* Get window geometry. */
 	getgeom(&client->id, &client->x, &client->y, &client->width, &client->height,
@@ -1406,18 +1399,17 @@ void focusnext_helper(bool arg)
 	} else {
 		if (arg) {
 			// start from focus next and find first valid item on circular list.
-			do {
-				cl = *std::rotate(wslists[curws].begin(),
-						  std::next(wslists[curws].begin()),
-						  wslists[curws].end());
-			} while (!cl->iconic);
+			// do {
+			cl = *std::rotate(wslists[curws].begin(), std::next(wslists[curws].begin()),
+					  wslists[curws].end());
+			// } while (!cl->iconic);
 		} else {
 			// start from focus previous and find first valid on circular list.
-			do {
-				cl = *std::rotate(wslists[curws].rbegin(),
-						  std::next(wslists[curws].rbegin()),
-						  wslists[curws].rend());
-			} while (!cl->iconic);
+			// do {
+			cl = *std::rotate(wslists[curws].rbegin(),
+					  std::next(wslists[curws].rbegin()),
+					  wslists[curws].rend());
+			//} while (!cl->iconic);
 		}
 	}
 	raisewindow(cl->id);
@@ -1590,7 +1582,7 @@ void resizestep_aspect(const Arg* arg)
 }
 
 /* Try to snap to other windows and monitor border */
-static void snapwindow(Client* client)
+void snapwindow(Client* client)
 {
 	int16_t mon_x, mon_y;
 	uint16_t mon_width, mon_height;
@@ -1777,20 +1769,12 @@ void setborders(Client const* client, const bool isitfocused)
 
 void unmax(Client* client)
 {
-	uint32_t values[5], mask = 0;
-
 	if (nullptr == client) return;
 
 	client->x = client->origsize.x;
 	client->y = client->origsize.y;
 	client->width = client->origsize.width;
 	client->height = client->origsize.height;
-
-	/* Restore geometry. */
-	values[0] = client->x;
-	values[1] = client->y;
-	values[2] = client->width;
-	values[3] = client->height;
 
 	client->maxed = client->hormaxed = false;
 	moveresize(client->id, client->x, client->y, client->width, client->height);
@@ -1820,7 +1804,6 @@ void unmaxwin(Client* client)
 
 void maxwin(Client* client, uint8_t with_offsets)
 {
-	uint32_t values[4];
 	int16_t mon_x, mon_y;
 	uint16_t mon_width, mon_height;
 
@@ -2104,8 +2087,6 @@ void deletewin()
 
 void changescreen(const Arg* arg)
 {
-	struct item* item;
-
 	if (nullptr == focuswin || nullptr == focuswin->monitor) return;
 
 	Monitor const* new_monitor = nullptr;
@@ -2359,7 +2340,7 @@ auto create_back_win() -> std::unique_ptr<Client>
 		focuswin->ignore_borders);
 }
 
-static void mousemotion(const Arg* arg)
+void mousemotion(const Arg* arg)
 {
 	int16_t mx, my, winx, winy, winw, winh;
 	xcb_query_pointer_reply_t* pointer;
@@ -2770,6 +2751,8 @@ void grabbuttons(Client const* c)
 
 void ewmh_init()
 {
+	ewmh = std::unique_ptr<xcb_ewmh_connection_t, decltype(&ewmh_deleter)>{
+		new xcb_ewmh_connection_t, ewmh_deleter};
 	xcb_intern_atom_cookie_t* cookie = xcb_ewmh_init_atoms(conn, ewmh.get());
 	if (!xcb_ewmh_init_atoms_replies(ewmh.get(), cookie, nullptr)) {
 		fprintf(stderr, "%s\n", "xcb_ewmh_init_atoms_replies:faild.");
@@ -2941,7 +2924,7 @@ void install_sig_handlers()
 		exit(-1);
 }
 
-auto main(int argc, char** argv) -> int
+auto main() -> int
 {
 	int scrno = 0;
 	atexit(cleanup);
