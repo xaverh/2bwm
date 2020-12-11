@@ -31,7 +31,6 @@
 #include <xcb/xcb_ewmh.h>
 #include <xcb/xcb_icccm.h>
 #include <xcb/xcb_keysyms.h>
-#include <xcb/xcb_xrm.h>
 
 ///---Types---///
 struct Monitor {
@@ -2802,8 +2801,6 @@ auto setup(int scrno) -> bool
 
 	xcb_ewmh_set_supported(ewmh.get(), scrno, LENGTH(net_atoms), net_atoms);
 
-	xcb_xrm_database_t* db = xcb_xrm_database_from_default(conn);
-
 	// Load the default config anyway.
 	conf.borderwidth = borders[1];
 	conf.outer_border = borders[0];
@@ -2816,44 +2813,6 @@ auto setup(int scrno) -> bool
 	conf.empty_col = getcolor(colors[6]);
 	conf.inverted_colors = inverted_colors;
 	conf.enable_compton = false;
-
-	if (db != nullptr) {
-		char* value;
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.border_width", nullptr, &value) >= 0)
-			conf.borderwidth = atoi(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.outer_border", nullptr, &value) >= 0)
-			conf.outer_border = atoi(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.focus_color", nullptr, &value) >= 0)
-			conf.focuscol = getcolor(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.unfocus_color", nullptr, &value) >= 0)
-			conf.unfocuscol = getcolor(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.fixed_color", nullptr, &value) >= 0)
-			conf.fixedcol = getcolor(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.unkill_color", nullptr, &value) >= 0)
-			conf.unkillcol = getcolor(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.outer_border_color", nullptr, &value) >=
-		    0)
-			conf.outer_border_col = getcolor(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.fixed_unkill_color", nullptr, &value) >=
-		    0)
-			conf.fixed_unkil_col = getcolor(value);
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.inverted_colors", nullptr, &value) >= 0)
-			conf.inverted_colors = strcmp(value, "true") == 0;
-
-		if (xcb_xrm_resource_get_string(db, "twobwm.enable_compton", nullptr, &value) >= 0)
-			conf.enable_compton = strcmp(value, "true") == 0;
-	}
-
-	xcb_xrm_database_free(db);
 
 	for (i = 0; i < NB_ATOMS; i++) ATOM[i] = getatom(atomnames[i][0]);
 

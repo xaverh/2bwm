@@ -136,24 +136,9 @@ Here's a (non-exhaustive) list of the dependencies:
 + xcb-keysyms
 + xcb-icccm
 + xcb-ewmh
-+ xcb-xrm (this one is quite new)
 
 If your system doesn't provide the above, or lacks some of them, you
 can download them [here](https://xcb.freedesktop.org/dist/).
-
-**Note**: `xcb-xrm` is not oficial yet,
-[here's the link](https://github.com/Airblader/xcb-util-xrm) to the repo.
-Archlinux and Voidlinux have it in their repositories as xcb-util-xrm.
-
-To build and install `xcb-xrm`, clone it and do the following commands:
-
-    cd xcb-util-xrm
-    git submodule update --init
-    ./autogen.sh --prefix=/usr
-    make
-    sudo make install
-
-Install it from your system's repositories in case it's available.
 
 Archlinux
 ---------
@@ -242,25 +227,6 @@ Raising hidden windows
 To show hidden windows you can use the hidden tool:
 
     hidden -c|xargs 9menu -popup -label Iconics -font "terminus12-10"
-
-Xresources configuration
-------------------------
-
-These are the values 2bwm will try loading from Xresources at startup:
-
-    twobwm.border_width: number
-    twobwm.outer_border: number
-    twobwm.focus_color: #RRGGBB
-    twobwm.unfocus_color: #RRGGBB
-    twobwm.fixed_color: #RRGGBB
-    twobwm.unkill_color: #RRGGBB
-    twobwm.outer_border_color: #RRGGBB
-    twobwm.fixed_unkill_color: #RRGGBB
-    twobwm.inverted_colors: true|false
-    twobwm.enable_compton: true|false
-
-**Note**: set `enable_compton` option to true in case you're using a
-composition manager.
 
 Preventing X11 Crash
 --------------------
