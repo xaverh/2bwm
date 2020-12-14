@@ -76,7 +76,8 @@ struct Sizepos {
 	uint16_t width, height;
 };
 
-struct Client {                       // Everything we know about a window.
+class Client { // Everything we know about a window.
+      public:
 	xcb_drawable_t id;            // ID of this window.
 	bool usercoord{false};        // X,Y was set by -geom.
 	int16_t x{0}, y{0};           // X/Y coordinate.
@@ -143,12 +144,16 @@ struct Config {
 
 ///---Internal Constants---///
 static constexpr size_t WORKSPACES{10};
-#define BUTTONMASK XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE
-#define NET_WM_FIXED                                                                               \
-	0xffffffff // Value in WM hint which means this window is fixed on all workspaces.
-#define TWOBWM_NOWS     0xfffffffe // This means we didn't get any window hint at all.
-#define LENGTH(x)       (sizeof(x) / sizeof(*x))
-#define MIN(X, Y)       ((X) < (Y) ? (X) : (Y))
+
+constexpr auto BUTTONMASK{XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE};
+
+// Value in WM hint which means this window is fixed on all workspaces.
+constexpr auto NET_WM_FIXED{0xffffffff};
+// This means we didn't get any window hint at all.
+constexpr auto TWOBWM_NOWS{0xfffffffe};
+
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
+
 #define CLEANMASK(mask) (mask & ~(numlockmask | XCB_MOD_MASK_LOCK))
 #define CONTROL         XCB_MOD_MASK_CONTROL /* Control key */
 #define ALT             XCB_MOD_MASK_1       /* ALT key */
@@ -299,7 +304,6 @@ void grabbuttons(Client const*);
 void delfromworkspace(Client*);
 void unkillablewindow(Client*);
 void fixwindow(Client*);
-auto getcolor(const char*) -> uint32_t;
 void forgetclient(Client*);
 void forgetwin(xcb_window_t);
 void fitonscreen(Client*);
@@ -717,13 +721,9 @@ void sendtoprevworkspace(const Arg* arg)
 }
 
 /* Get the pixel values of a named colour colstr. Returns pixel values. */
-auto getcolor(const char* hex) -> uint32_t
+consteval auto getcolor(uint32_t hex) -> uint32_t
 {
-	uint32_t rgb48;
-	char strgroups[7] = {hex[1], hex[2], hex[3], hex[4], hex[5], hex[6], '\0'};
-
-	rgb48 = strtol(strgroups, nullptr, 16);
-	return rgb48 | 0xff000000;
+	return hex | 0xff000000;
 }
 
 /* Forget everything about client client. */
@@ -2812,7 +2812,7 @@ auto setup(int scrno) -> bool
 	conf.fixed_unkil_col = getcolor(colors[4]);
 	conf.empty_col = getcolor(colors[6]);
 	conf.inverted_colors = inverted_colors;
-	conf.enable_compton = false;
+	conf.enable_compton = true;
 
 	for (i = 0; i < NB_ATOMS; i++) ATOM[i] = getatom(atomnames[i][0]);
 

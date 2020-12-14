@@ -1,54 +1,49 @@
 ///---User configurable stuff---///
 ///---Modifiers---///
 
-#define TWOBWM_PATH "/usr/local/bin/2bwm"
-#define MOD                                                                                        \
-	XCB_MOD_MASK_4 /* Super/Windows key  or check xmodmap(1) with -pm  defined in              \
-			  /usr/include/xcb/xproto.h */
+static constexpr auto TWOBWM_PATH{"/usr/local/bin/2bwm"};
+
+// Super/Windows key  or check xmodmap(1) with -pm defined in /usr/include/xcb/xproto.h
+static constexpr auto MOD{XCB_MOD_MASK_4};
+
 ///--Speed---///
 /* Move this many pixels when moving or resizing with keyboard unless the window has hints saying
  *otherwise. 0)move step slow   1)move step fast 2)mouse slow       3)mouse fast     */
-static const uint16_t movements[] = {20, 40, 15, 400};
+static constexpr uint16_t movements[] = {20, 40, 15, 400};
 /* resize by line like in mcwm -- jmbi */
-static const bool resize_by_line = true;
+static constexpr bool resize_by_line = true;
 /* the ratio used when resizing and keeping the aspect */
-static const float resize_keep_aspect_ratio = 1.03;
+static constexpr float resize_keep_aspect_ratio = 1.03;
 ///---Offsets---///
 /*0)offsetx          1)offsety
  *2)maxwidth         3)maxheight */
-static const uint8_t offsets[] = {0, 0, 0, 0};
+static constexpr uint8_t offsets[] = {0, 0, 0, 0};
 ///---Colors---///
 /*0)focuscol         1)unfocuscol
  *2)fixedcol         3)unkilcol
  *4)fixedunkilcol    5)outerbordercol
  *6)emptycol         */
-static const char *colors[] = {
-                               "#cdd5d5",
-                               "#82a7c7",
-                               "#faf669",
-                               "#b6fa69",
-                               "#faad69",
-                               "#87737b",
-                               "#1E1E1E"};
+static constexpr uint32_t colors[]{0xcdd5d5, 0x82a7c7, 0xfaf669, 0xb6fa69,
+				   0xfaad69, 0x87737b, 0x1E1E1E};
 /* if this is set to true the inner border and outer borders colors will be swapped */
-static const bool inverted_colors = true;
+static constexpr bool inverted_colors = true;
 ///---Cursor---///
 /* default position of the cursor:
  * correct values are:
  * TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, MIDDLE
  * All these are relative to the current window. */
-#define CURSOR_POSITION MIDDLE
+static constexpr auto CURSOR_POSITION{MIDDLE};
 ///---Borders---///
 /*0) Outer border size. If you put this negative it will be a square.
  *1) Full borderwidth    2) Magnet border size
  *3) Resize border size  */
-static const uint8_t borders[] = {3, 7, 10, 7};
+static constexpr uint8_t borders[] = {3, 7, 10, 7};
 /* Windows that won't have a border.
  * It uses substring comparison with what is found in the WM_NAME
  * attribute of the window. You can test this using `xprop WM_NAME`
  */
-#define LOOK_INTO "WM_NAME"
-static const char* ignore_names[] = {"bar", "xclock"};
+static constexpr auto LOOK_INTO{"WM_NAME"};
+static constexpr char* ignore_names[]{"bar", "xclock"};
 ///--Menus and Programs---///
 static const char* menucmd[] = {"dmenu_run", nullptr};
 ///--Custom foo---///
@@ -84,22 +79,15 @@ static void toggle_sloppy(const Arg* arg)
  *  XFilterEvent returns: False
  *
  *  The keycode here is keysym 0x1008ff17, so use  0x1008ff17
- *
- *
- * For AZERTY keyboards XK_1...0 should be replaced by :
- *      DESKTOPCHANGE(     XK_ampersand,                     0)
- *      DESKTOPCHANGE(     XK_eacute,                        1)
- *      DESKTOPCHANGE(     XK_quotedbl,                      2)
- *      DESKTOPCHANGE(     XK_apostrophe,                    3)
- *      DESKTOPCHANGE(     XK_parenleft,                     4)
- *      DESKTOPCHANGE(     XK_minus,                         5)
- *      DESKTOPCHANGE(     XK_egrave,                        6)
- *      DESKTOPCHANGE(     XK_underscore,                    7)
- *      DESKTOPCHANGE(     XK_ccedilla,                      8)
- *      DESKTOPCHANGE(     XK_agrave,                        9)*
  */
 #define DESKTOPCHANGE(K, N)                                                                        \
-	{MOD, K, changeworkspace, {.i = N}}, {MOD | SHIFT, K, sendtoworkspace, {.i = N}},
+	{MOD, K, changeworkspace, {.i = N}},                                                       \
+	{                                                                                          \
+		MOD | SHIFT, K, sendtoworkspace,                                                   \
+		{                                                                                  \
+			.i = N                                                                     \
+		}                                                                                  \
+	}
 static Key keys[] = {
 	/* modifier           key            function           argument */
 	// Focus to next/previous window
@@ -207,9 +195,16 @@ static Key keys[] = {
 	{MOD, XK_space, halfandcentered, {.i = 0}},
 	{MOD, XK_s, toggle_sloppy, {.com = sloppy_switch_cmd}},
 	// Change current workspace
-	DESKTOPCHANGE(XK_1, 0) DESKTOPCHANGE(XK_2, 1) DESKTOPCHANGE(XK_3, 2) DESKTOPCHANGE(XK_4, 3)
-		DESKTOPCHANGE(XK_5, 4) DESKTOPCHANGE(XK_6, 5) DESKTOPCHANGE(XK_7, 6)
-			DESKTOPCHANGE(XK_8, 7) DESKTOPCHANGE(XK_9, 8) DESKTOPCHANGE(XK_0, 9)};
+	DESKTOPCHANGE(XK_1, 0),
+	DESKTOPCHANGE(XK_2, 1),
+	DESKTOPCHANGE(XK_3, 2),
+	DESKTOPCHANGE(XK_4, 3),
+	DESKTOPCHANGE(XK_5, 4),
+	DESKTOPCHANGE(XK_6, 5),
+	DESKTOPCHANGE(XK_7, 6),
+	DESKTOPCHANGE(XK_8, 7),
+	DESKTOPCHANGE(XK_9, 8),
+	DESKTOPCHANGE(XK_0, 9)};
 // the last argument makes it a root window only event
 static Button buttons[] = {{MOD, XCB_BUTTON_INDEX_1, mousemotion, {.i = TWOBWM_MOVE}, false},
 			   {MOD, XCB_BUTTON_INDEX_3, mousemotion, {.i = TWOBWM_RESIZE}, false},
