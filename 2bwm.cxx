@@ -145,7 +145,7 @@ static constexpr auto TWOBWM_NOWS{0xfffffffe};
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-constexpr auto cleanmask(auto mask)
+constexpr auto cleanmask(auto mask, auto numlockmask)
 {
 	return mask & ~(numlockmask | XCB_MOD_MASK_LOCK);
 }
@@ -327,6 +327,12 @@ auto getatom(const char*) -> xcb_atom_t;
 void getmonsize(int8_t, int16_t*, int16_t*, uint16_t*, uint16_t*, const Client*);
 void movepointerback(const int16_t, const int16_t, const Client*);
 void snapwindow(Client*);
+
+[[nodiscard]] consteval auto getcolor(uint32_t hex) -> uint32_t
+{
+	return hex | 0xff000000;
+}
+
 #include "config.hxx"
 
 void fix()
@@ -710,11 +716,6 @@ void sendtoprevworkspace(const Arg* arg)
 	Arg arg2 = {.i = static_cast<uint32_t>(curws - 1)};
 	Arg arg3 = {.i = WORKSPACES - 1};
 	curws > 0 ? sendtoworkspace(&arg2) : sendtoworkspace(&arg3);
-}
-
-[[nodiscard]] consteval auto getcolor(uint32_t hex) -> uint32_t
-{
-	return hex | 0xff000000;
 }
 
 /* Forget everything about client client. */
@@ -2131,7 +2132,8 @@ void handle_keypress(xcb_generic_event_t* e)
 	xcb_keysym_t keysym = xcb_get_keysym(ev->detail);
 
 	for (unsigned int i = 0; i < LENGTH(keys); i++) {
-		if (keysym == keys[i].keysym && cleanmask(keys[i].mod) == cleanmask(ev->state) &&
+		if (keysym == keys[i].keysym &&
+		    cleanmask(keys[i].mod, numlockmask) == cleanmask(ev->state, numlockmask) &&
 		    keys[i].func) {
 			keys[i].func(&keys[i].arg);
 			break;
@@ -2405,7 +2407,8 @@ void buttonpress(xcb_generic_event_t* ev)
 	Client const* client;
 	unsigned int i;
 
-	if (!is_sloppy && e->detail == XCB_BUTTON_INDEX_1 && cleanmask(e->state) == 0) {
+	if (!is_sloppy && e->detail == XCB_BUTTON_INDEX_1 &&
+	    cleanmask(e->state, numlockmask) == 0) {
 		// skip if already focused
 		if (nullptr != focuswin && e->event == focuswin->id) { return; }
 		client = findclient(&e->event);
@@ -2419,7 +2422,7 @@ void buttonpress(xcb_generic_event_t* ev)
 
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (buttons[i].func && buttons[i].button == e->detail &&
-		    cleanmask(buttons[i].mask) == cleanmask(e->state)) {
+		    cleanmask(buttons[i].mask, numlockmask) == cleanmask(e->state, numlockmask)) {
 			if ((focuswin == nullptr) && buttons[i].func == mousemotion) return;
 			if (buttons[i].root_only) {
 				if (e->event == e->root && e->child == 0)
