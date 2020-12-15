@@ -51,7 +51,7 @@ auto get_wm_state(xcb_drawable_t win) -> uint32_t
 
 	reply = xcb_get_property_reply(conn, cookie, nullptr);
 	if (nullptr == reply) {
-		fprintf(stderr, "mcwm: Couldn't get properties for win %d\n", win);
+		fprintf(stderr, "hidden: Couldn't get properties for win %d\n", win);
 		return -1;
 	}
 
