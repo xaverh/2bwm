@@ -27,6 +27,8 @@ static constexpr uint32_t colors[]{0xcdd5d5, 0x82a7c7, 0xfaf669, 0xb6fa69,
 				   0xfaad69, 0x87737b, 0x1E1E1E};
 /* if this is set to true the inner border and outer borders colors will be swapped */
 static constexpr bool inverted_colors = true;
+
+static constexpr bool enable_compton{false};
 ///---Cursor---///
 /* default position of the cursor:
  * correct values are:

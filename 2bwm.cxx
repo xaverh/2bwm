@@ -35,8 +35,8 @@
 ///---Types---///
 struct Monitor {
 	xcb_randr_output_t id;
-	int16_t x, y;           // X and Y.
-	uint16_t width, height; // Width/Height in pixels.
+	int16_t x, y;
+	uint16_t width, height;
 	// Constructor ersetzt addmonitor, das das neue Objekt am Anfang einer linked list erstellt.
 	Monitor(xcb_randr_output_t id, const int16_t x, const int16_t y, const uint16_t width,
 		const uint16_t height)
@@ -139,7 +139,6 @@ struct Config {
 	uint32_t focuscol, unfocuscol, fixedcol, unkillcol, empty_col, fixed_unkil_col,
 		outer_border_col;
 	bool inverted_colors;
-	bool enable_compton;
 };
 
 ///---Internal Constants---///
@@ -720,8 +719,7 @@ void sendtoprevworkspace(const Arg* arg)
 	curws > 0 ? sendtoworkspace(&arg2) : sendtoworkspace(&arg3);
 }
 
-/* Get the pixel values of a named colour colstr. Returns pixel values. */
-consteval auto getcolor(uint32_t hex) -> uint32_t
+[[nodiscard]] consteval auto getcolor(uint32_t hex) -> uint32_t
 {
 	return hex | 0xff000000;
 }
@@ -2323,7 +2321,7 @@ auto create_back_win() -> std::unique_ptr<Client>
 			  /* visual */
 			  screen->root_visual, XCB_CW_BORDER_PIXEL, values);
 
-	if (conf.enable_compton) {
+	if constexpr (enable_compton) {
 		values[0] = 1;
 		xcb_change_window_attributes(conn, id, XCB_BACK_PIXMAP_PARENT_RELATIVE, values);
 	} else {
