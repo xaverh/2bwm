@@ -143,9 +143,7 @@ static constexpr auto NET_WM_FIXED{0xffffffff};
 // This means we didn't get any window hint at all.
 static constexpr auto TWOBWM_NOWS{0xfffffffe};
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
-
-constexpr auto cleanmask(auto mask, auto numlockmask)
+[[nodiscard]] constexpr auto cleanmask(auto mask, auto numlockmask) noexcept
 {
 	return mask & ~(numlockmask | XCB_MOD_MASK_LOCK);
 }
@@ -1019,23 +1017,21 @@ auto xcb_get_keycodes(xcb_keysym_t keysym) -> xcb_keycode_t*
 	return keycode;
 }
 
-/* the wm should listen to key presses */
+// the wm should listen to key presses
 void grabkeys()
 {
 	xcb_keycode_t* keycode;
-	int i, k, m;
 	unsigned int modifiers[] = {0, XCB_MOD_MASK_LOCK, numlockmask,
 				    numlockmask | XCB_MOD_MASK_LOCK};
 
 	xcb_ungrab_key(conn, XCB_GRAB_ANY, screen->root, XCB_MOD_MASK_ANY);
 
-	for (i = 0; i < LENGTH(keys); i++) {
-		keycode = xcb_get_keycodes(keys[i].keysym);
+	for (const auto& key : keys) {
+		keycode = xcb_get_keycodes(key.keysym);
 
-		for (k = 0; keycode[k] != XCB_NO_SYMBOL; k++)
-			for (m = 0; m < LENGTH(modifiers); m++)
-				xcb_grab_key(conn, 1, screen->root, keys[i].mod | modifiers[m],
-					     keycode[k],
+		for (auto k = 0; keycode[k] != XCB_NO_SYMBOL; k++)
+			for (auto modifier : modifiers)
+				xcb_grab_key(conn, 1, screen->root, key.mod | modifier, keycode[k],
 					     XCB_GRAB_MODE_ASYNC, // pointer mode
 					     XCB_GRAB_MODE_ASYNC  // keyboard mode
 				);
@@ -2131,11 +2127,11 @@ void handle_keypress(xcb_generic_event_t* e)
 	auto* ev = (xcb_key_press_event_t*)e;
 	xcb_keysym_t keysym = xcb_get_keysym(ev->detail);
 
-	for (unsigned int i = 0; i < LENGTH(keys); i++) {
-		if (keysym == keys[i].keysym &&
-		    cleanmask(keys[i].mod, numlockmask) == cleanmask(ev->state, numlockmask) &&
-		    keys[i].func) {
-			keys[i].func(&keys[i].arg);
+	for (auto const& key : keys) {
+		if (keysym == key.keysym &&
+		    cleanmask(key.mod, numlockmask) == cleanmask(ev->state, numlockmask) &&
+		    key.func) {
+			key.func(&key.arg);
 			break;
 		}
 	}
@@ -2405,7 +2401,6 @@ void buttonpress(xcb_generic_event_t* ev)
 {
 	auto* e = (xcb_button_press_event_t*)ev;
 	Client const* client;
-	unsigned int i;
 
 	if (!is_sloppy && e->detail == XCB_BUTTON_INDEX_1 &&
 	    cleanmask(e->state, numlockmask) == 0) {
@@ -2420,15 +2415,14 @@ void buttonpress(xcb_generic_event_t* ev)
 		return;
 	}
 
-	for (i = 0; i < LENGTH(buttons); i++)
-		if (buttons[i].func && buttons[i].button == e->detail &&
-		    cleanmask(buttons[i].mask, numlockmask) == cleanmask(e->state, numlockmask)) {
-			if ((focuswin == nullptr) && buttons[i].func == mousemotion) return;
-			if (buttons[i].root_only) {
-				if (e->event == e->root && e->child == 0)
-					buttons[i].func(&(buttons[i].arg));
+	for (auto const& b : buttons)
+		if (b.func && b.button == e->detail &&
+		    cleanmask(b.mask, numlockmask) == cleanmask(e->state, numlockmask)) {
+			if ((focuswin == nullptr) && b.func == mousemotion) return;
+			if (b.root_only) {
+				if (e->event == e->root && e->child == 0) b.func(&(b.arg));
 			} else {
-				buttons[i].func(&(buttons[i].arg));
+				b.func(&(b.arg));
 			}
 		}
 }
@@ -2759,7 +2753,8 @@ auto setup(int scrno) -> bool
 				  ewmh->_NET_WM_STATE_DEMANDS_ATTENTION,
 				  ewmh->_NET_WM_STATE_FULLSCREEN};
 
-	xcb_ewmh_set_supported(ewmh.get(), scrno, LENGTH(net_atoms), net_atoms);
+	xcb_ewmh_set_supported(ewmh.get(), scrno, sizeof net_atoms / sizeof net_atoms[0],
+			       net_atoms);
 
 	for (i = 0; i < NB_ATOMS; i++) ATOM[i] = getatom(atomnames[i][0]);
 

@@ -76,7 +76,7 @@ static const char* sloppy_switch_cmd[] = {nullptr};
 static void toggle_sloppy(const Arg* arg)
 {
 	is_sloppy = !is_sloppy;
-	if (arg->com != nullptr && LENGTH(arg->com) > 0) { start(arg); }
+	if (arg->com != nullptr && (sizeof (arg->com) / sizeof arg->com[0]) > 0) { start(arg); }
 }
 ///---Shortcuts---///
 /* Check /usr/include/X11/keysymdef.h for the list of all keys
