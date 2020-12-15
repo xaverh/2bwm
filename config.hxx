@@ -18,28 +18,37 @@ static constexpr float resize_keep_aspect_ratio = 1.03;
 /*0)offsetx          1)offsety
  *2)maxwidth         3)maxheight */
 static constexpr uint8_t offsets[] = {0, 0, 0, 0};
+
 ///---Colors---///
-/*0)focuscol         1)unfocuscol
- *2)fixedcol         3)unkilcol
- *4)fixedunkilcol    5)outerbordercol
- *6)emptycol         */
-static constexpr uint32_t colors[]{0xcdd5d5, 0x82a7c7, 0xfaf669, 0xb6fa69,
-				   0xfaad69, 0x87737b, 0x1E1E1E};
-/* if this is set to true the inner border and outer borders colors will be swapped */
-static constexpr bool inverted_colors = true;
+constexpr uint32_t focuscol{getcolor(0xcdd5d5)};
+constexpr uint32_t unfocuscol{getcolor(0x82a7c7)};
+constexpr uint32_t fixedcol{getcolor(0xfaf669)};
+constexpr uint32_t unkilcol{getcolor(0xb6fa69)};
+constexpr uint32_t fixedunkilcol{getcolor(0xfaad69)};
+constexpr uint32_t outerbordercol{getcolor(0x87737b)};
+constexpr uint32_t emptycol{getcolor(0x1e1e1e)};
+
+// if this is set to true the inner border and outer borders colors will be swapped
+static constexpr bool inverted_colors{true};
 
 static constexpr bool enable_compton{false};
+
 ///---Cursor---///
 /* default position of the cursor:
  * correct values are:
  * TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, MIDDLE
  * All these are relative to the current window. */
-static constexpr auto CURSOR_POSITION{MIDDLE};
+static constexpr auto cursor_position{MIDDLE};
+
 ///---Borders---///
-/*0) Outer border size. If you put this negative it will be a square.
- *1) Full borderwidth    2) Magnet border size
- *3) Resize border size  */
-static constexpr uint8_t borders[] = {3, 7, 10, 7};
+// Outer border size
+static constexpr uint8_t outer_border{3};
+// Full borderwidth
+static constexpr uint8_t borderwidth{7};
+// Magnet border size
+static constexpr uint8_t magnet_border{10};
+// Resize border size
+static constexpr uint8_t resize_border{7};
 /* Windows that won't have a border.
  * It uses substring comparison with what is found in the WM_NAME
  * attribute of the window. You can test this using `xprop WM_NAME`

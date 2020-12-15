@@ -126,37 +126,33 @@ class Client { // Everything we know about a window.
 	}
 };
 
-struct Winconf { // Window configuration data.
+struct Winconf {
 	int16_t x, y;
 	uint16_t width, height;
 	uint8_t stackmode;
 	xcb_window_t sibling;
 };
 
-struct Config {
-	int8_t borderwidth;  // Do we draw borders for non-focused window? If so, how large?
-	int8_t outer_border; // The size of the outer border
-	uint32_t focuscol, unfocuscol, fixedcol, unkillcol, empty_col, fixed_unkil_col,
-		outer_border_col;
-	bool inverted_colors;
-};
-
 ///---Internal Constants---///
 static constexpr size_t WORKSPACES{10};
 
-constexpr auto BUTTONMASK{XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE};
+static constexpr auto BUTTONMASK{XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE};
 
 // Value in WM hint which means this window is fixed on all workspaces.
-constexpr auto NET_WM_FIXED{0xffffffff};
+static constexpr auto NET_WM_FIXED{0xffffffff};
 // This means we didn't get any window hint at all.
-constexpr auto TWOBWM_NOWS{0xfffffffe};
+static constexpr auto TWOBWM_NOWS{0xfffffffe};
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-#define CLEANMASK(mask) (mask & ~(numlockmask | XCB_MOD_MASK_LOCK))
-#define CONTROL         XCB_MOD_MASK_CONTROL /* Control key */
-#define ALT             XCB_MOD_MASK_1       /* ALT key */
-#define SHIFT           XCB_MOD_MASK_SHIFT   /* Shift key */
+constexpr auto cleanmask(auto mask)
+{
+	return mask & ~(numlockmask | XCB_MOD_MASK_LOCK);
+}
+
+static constexpr auto CONTROL{XCB_MOD_MASK_CONTROL};
+static constexpr auto ALT{XCB_MOD_MASK_1};
+static constexpr auto SHIFT{XCB_MOD_MASK_SHIFT};
 
 enum { TWOBWM_MOVE, TWOBWM_RESIZE };
 // XXX hier könnte man eine flag setzen, die die Richtung automatisch ändert
@@ -209,7 +205,6 @@ enum { TWOBWM_CURSOR_UP,
        TWOBWM_CURSOR_LEFT_SLOW };
 
 ///---Globals---///
-static Config conf;
 static xcb_generic_event_t* ev = nullptr;
 static void (*events[XCB_NO_OPERATION])(xcb_generic_event_t* e);
 static unsigned int numlockmask = 0;
@@ -330,7 +325,6 @@ void sigcatch(const int);
 void ewmh_init();
 auto getatom(const char*) -> xcb_atom_t;
 void getmonsize(int8_t, int16_t*, int16_t*, uint16_t*, uint16_t*, const Client*);
-void noborder(int16_t*, Client*, bool);
 void movepointerback(const int16_t, const int16_t, const Client*);
 void snapwindow(Client*);
 #include "config.hxx"
@@ -400,7 +394,7 @@ void centerpointer(xcb_drawable_t win, Client const* cl)
 
 	cur_x = cur_y = 0;
 
-	switch (CURSOR_POSITION) {
+	switch (cursor_position) {
 	case BOTTOM_RIGHT:
 		cur_x += cl->width;
 		[[fallthrough]];
@@ -470,9 +464,8 @@ auto xcb_screen_of_display(xcb_connection_t* con, int screen) -> xcb_screen_t*
 
 void movepointerback(const int16_t startx, const int16_t starty, const Client* client)
 {
-	if (startx > (0 - conf.borderwidth - 1) &&
-	    startx < (client->width + conf.borderwidth + 1) &&
-	    starty > (0 - conf.borderwidth - 1) && starty < (client->height + conf.borderwidth + 1))
+	if (startx > (0 - borderwidth - 1) && startx < (client->width + borderwidth + 1) &&
+	    starty > (0 - borderwidth - 1) && starty < (client->height + borderwidth + 1))
 		xcb_warp_pointer(conn, XCB_NONE, client->id, 0, 0, 0, 0, startx, starty);
 }
 
@@ -770,16 +763,6 @@ void getmonsize(int8_t with_offsets, int16_t* mon_x, int16_t* mon_y, uint16_t* m
 	}
 }
 
-void noborder(int16_t* temp, Client* client, bool set_unset)
-{
-	if (client->ignore_borders) {
-		if (set_unset) {
-			*temp = conf.borderwidth;
-			conf.borderwidth = 0;
-		} else
-			conf.borderwidth = *temp;
-	}
-}
 void maximize_helper(Client* client, uint16_t mon_x, uint16_t mon_y, uint16_t mon_width,
 		     uint16_t mon_height)
 {
@@ -824,8 +807,8 @@ void fitonscreen(Client* client)
 		if (willresize) {
 			client->x = mon_x;
 			client->y = mon_y;
-			client->width -= conf.borderwidth * 2;
-			client->height -= conf.borderwidth * 2;
+			client->width -= borderwidth * 2;
+			client->height -= borderwidth * 2;
 			maximize_helper(client, mon_x, mon_y, mon_width, mon_height);
 			return;
 		} else {
@@ -838,9 +821,9 @@ void fitonscreen(Client* client)
 		willmove = true;
 		/* Is it outside the physical monitor? */
 		if (client->x > mon_x + mon_width)
-			client->x = mon_x + mon_width - client->width - conf.borderwidth * 2;
+			client->x = mon_x + mon_width - client->width - borderwidth * 2;
 		if (client->y > mon_y + mon_height)
-			client->y = mon_y + mon_height - client->height - conf.borderwidth * 2;
+			client->y = mon_y + mon_height - client->height - borderwidth * 2;
 		if (client->x < mon_x) client->x = mon_x;
 		if (client->y < mon_y) client->y = mon_y;
 	}
@@ -857,32 +840,30 @@ void fitonscreen(Client* client)
 		willresize = true;
 	}
 
-	noborder(&temp, client, true);
+	uint8_t const bw{client->ignore_borders ? 0 : borderwidth};
 	/* If the window is larger than our screen, just place it in
 	 * the corner and resize. */
-	if (client->width + conf.borderwidth * 2 > mon_width) {
+	if (client->width + bw * 2 > mon_width) {
 		client->x = mon_x;
-		client->width = mon_width - conf.borderwidth * 2;
+		client->width = mon_width - bw * 2;
 		;
 		willmove = willresize = true;
-	} else if (client->x + client->width + conf.borderwidth * 2 > mon_x + mon_width) {
-		client->x = mon_x + mon_width - (client->width + conf.borderwidth * 2);
+	} else if (client->x + client->width + bw * 2 > mon_x + mon_width) {
+		client->x = mon_x + mon_width - (client->width + bw * 2);
 		willmove = true;
 	}
-	if (client->height + conf.borderwidth * 2 > mon_height) {
+	if (client->height + bw * 2 > mon_height) {
 		client->y = mon_y;
-		client->height = mon_height - conf.borderwidth * 2;
+		client->height = mon_height - bw * 2;
 		willmove = willresize = true;
-	} else if (client->y + client->height + conf.borderwidth * 2 > mon_y + mon_height) {
-		client->y = mon_y + mon_height - (client->height + conf.borderwidth * 2);
+	} else if (client->y + client->height + bw * 2 > mon_y + mon_height) {
+		client->y = mon_y + mon_height - (client->height + bw * 2);
 		willmove = true;
 	}
 
 	if (willmove) movewindow(client->id, client->x, client->y);
 
 	if (willresize) resize(client->id, client->width, client->height);
-
-	noborder(&temp, client, false);
 }
 
 /* Set position, geometry and attributes of a new window and show it on
@@ -963,7 +944,7 @@ auto setupwin(xcb_window_t win) -> Client*
 		xcb_ewmh_get_atoms_reply_wipe(&win_type);
 	}
 	values[0] = XCB_EVENT_MASK_ENTER_WINDOW;
-	xcb_change_window_attributes(conn, win, XCB_CW_BACK_PIXEL, &conf.empty_col);
+	xcb_change_window_attributes(conn, win, XCB_CW_BACK_PIXEL, &emptycol);
 	xcb_change_window_attributes_checked(conn, win, XCB_CW_EVENT_MASK, values);
 
 	/* Add this window to the X Save Set. */
@@ -1355,23 +1336,21 @@ void movelim(Client* client)
 	uint16_t mon_height, mon_width;
 
 	getmonsize(1, &mon_x, &mon_y, &mon_width, &mon_height, client);
-	noborder(&temp, client, true);
+
+	uint8_t const bw{client->ignore_borders ? 0 : borderwidth};
 
 	/* Is it outside the physical monitor or close to the side? */
-	if (client->y - conf.borderwidth < mon_y || client->y < borders[2] + mon_y)
+	if (client->y - bw < mon_y || client->y < magnet_border + mon_y)
 		client->y = mon_y;
-	else if (client->y + client->height + (conf.borderwidth * 2) >
-		 mon_y + mon_height - borders[2])
-		client->y = mon_y + mon_height - client->height - conf.borderwidth * 2;
+	else if (client->y + client->height + (bw * 2) > mon_y + mon_height - magnet_border)
+		client->y = mon_y + mon_height - client->height - bw * 2;
 
-	if (client->x < borders[2] + mon_x)
+	if (client->x < magnet_border + mon_x)
 		client->x = mon_x;
-	else if (client->x + client->width + (conf.borderwidth * 2) >
-		 mon_x + mon_width - borders[2])
-		client->x = mon_x + mon_width - client->width - conf.borderwidth * 2;
+	else if (client->x + client->width + (bw * 2) > mon_x + mon_width - magnet_border)
+		client->x = mon_x + mon_width - client->width - bw * 2;
 
 	movewindow(client->id, client->x, client->y);
-	noborder(&temp, client, false);
 }
 
 void movewindow(xcb_drawable_t win, const uint32_t x, const uint32_t y)
@@ -1479,20 +1458,20 @@ void resizelim(Client* client)
 	uint16_t mon_width, mon_height;
 
 	getmonsize(1, &mon_x, &mon_y, &mon_width, &mon_height, client);
-	noborder(&temp, client, true);
+
+	uint8_t const bw{client->ignore_borders ? 0 : borderwidth};
 
 	/* Is it smaller than it wants to  be? */
 	if (0 != client->min_height && client->height < client->min_height)
 		client->height = client->min_height;
 	if (0 != client->min_width && client->width < client->min_width)
 		client->width = client->min_width;
-	if (client->x + client->width + conf.borderwidth > mon_x + mon_width)
-		client->width = mon_width - ((client->x - mon_x) + conf.borderwidth * 2);
-	if (client->y + client->height + conf.borderwidth > mon_y + mon_height)
-		client->height = mon_height - ((client->y - mon_y) + conf.borderwidth * 2);
+	if (client->x + client->width + bw > mon_x + mon_width)
+		client->width = mon_width - ((client->x - mon_x) + bw * 2);
+	if (client->y + client->height + bw > mon_y + mon_height)
+		client->height = mon_height - ((client->y - mon_y) + bw * 2);
 
 	resize(client->id, client->width, client->height);
-	noborder(&temp, client, false);
 }
 
 void moveresize(xcb_drawable_t win, const uint16_t x, const uint16_t y, const uint16_t width,
@@ -1588,29 +1567,26 @@ void snapwindow(Client* client)
 
 	for (auto const& win : wslists[curws]) {
 		if (client != win) {
-			if (abs((win->x + win->width) - client->x + conf.borderwidth) < borders[2])
+			if (abs((win->x + win->width) - client->x + borderwidth) < magnet_border)
 				if (client->y + client->height > win->y &&
 				    client->y < win->y + win->height)
-					client->x = (win->x + win->width) + (2 * conf.borderwidth);
+					client->x = (win->x + win->width) + (2 * borderwidth);
 
-			if (abs((win->y + win->height) - client->y + conf.borderwidth) < borders[2])
+			if (abs((win->y + win->height) - client->y + borderwidth) < magnet_border)
 				if (client->x + client->width > win->x &&
 				    client->x < win->x + win->width)
-					client->y = (win->y + win->height) + (2 * conf.borderwidth);
+					client->y = (win->y + win->height) + (2 * borderwidth);
 
-			if (abs((client->x + client->width) - win->x + conf.borderwidth) <
-			    borders[2])
+			if (abs((client->x + client->width) - win->x + borderwidth) < magnet_border)
 				if (client->y + client->height > win->y &&
 				    client->y < win->y + win->height)
-					client->x =
-						(win->x - client->width) - (2 * conf.borderwidth);
+					client->x = (win->x - client->width) - (2 * borderwidth);
 
-			if (abs((client->y + client->height) - win->y + conf.borderwidth) <
-			    borders[2])
+			if (abs((client->y + client->height) - win->y + borderwidth) <
+			    magnet_border)
 				if (client->x + client->width > win->x &&
 				    client->x < win->x + win->width)
-					client->y =
-						(win->y - client->height) - (2 * conf.borderwidth);
+					client->y = (win->y - client->height) - (2 * borderwidth);
 		}
 	}
 }
@@ -1623,7 +1599,7 @@ void mousemove(const int16_t rel_x, const int16_t rel_y)
 	focuswin->x = rel_x;
 	focuswin->y = rel_y;
 
-	if (borders[2] > 0) snapwindow(focuswin);
+	if constexpr (magnet_border > 0) snapwindow(focuswin);
 
 	movelim(focuswin);
 }
@@ -1676,56 +1652,49 @@ void movestep(const Arg* arg)
 void setborders(Client const* client, const bool isitfocused)
 {
 	uint32_t values[1]; /* this is the color maintainer */
-	uint16_t half = 0;
-	bool inv = conf.inverted_colors;
 
 	if (client->maxed || client->ignore_borders) return;
 
-	/* Set border width. */
-	values[0] = conf.borderwidth;
+	// Set border width.
+	values[0] = borderwidth;
 	xcb_configure_window(conn, client->id, XCB_CONFIG_WINDOW_BORDER_WIDTH, values);
-
-	if (top_win != 0 && client->id == top_win) inv = !inv;
-
-	half = conf.outer_border;
 
 	xcb_rectangle_t rect_inner[] = {
 		{static_cast<int16_t>(client->width), 0,
-		 static_cast<uint16_t>(conf.borderwidth - half),
-		 static_cast<uint16_t>(client->height + conf.borderwidth - half)},
-		{static_cast<int16_t>(client->width + conf.borderwidth + half), 0,
-		 static_cast<uint16_t>(conf.borderwidth - half),
-		 static_cast<uint16_t>(client->height + conf.borderwidth - half)},
+		 static_cast<uint16_t>(borderwidth - outer_border),
+		 static_cast<uint16_t>(client->height + borderwidth - outer_border)},
+		{static_cast<int16_t>(client->width + borderwidth + outer_border), 0,
+		 static_cast<uint16_t>(borderwidth - outer_border),
+		 static_cast<uint16_t>(client->height + borderwidth - outer_border)},
 		{0, static_cast<int16_t>(client->height),
-		 static_cast<uint16_t>(client->width + conf.borderwidth - half),
-		 static_cast<uint16_t>(conf.borderwidth - half)},
-		{0, static_cast<int16_t>(client->height + conf.borderwidth + half),
-		 static_cast<uint16_t>(client->width + conf.borderwidth - half),
-		 static_cast<uint16_t>(conf.borderwidth - half)},
-		{static_cast<int16_t>(client->width + conf.borderwidth + half),
-		 static_cast<int16_t>(conf.borderwidth + client->height + half),
-		 static_cast<uint16_t>(conf.borderwidth), static_cast<uint16_t>(conf.borderwidth)}};
+		 static_cast<uint16_t>(client->width + borderwidth - outer_border),
+		 static_cast<uint16_t>(borderwidth - outer_border)},
+		{0, static_cast<int16_t>(client->height + borderwidth + outer_border),
+		 static_cast<uint16_t>(client->width + borderwidth - outer_border),
+		 static_cast<uint16_t>(borderwidth - outer_border)},
+		{static_cast<int16_t>(client->width + borderwidth + outer_border),
+		 static_cast<int16_t>(borderwidth + client->height + outer_border),
+		 static_cast<uint16_t>(borderwidth), static_cast<uint16_t>(borderwidth)}};
 
 	xcb_rectangle_t rect_outer[] = {
-		{static_cast<int16_t>(client->width + conf.borderwidth - half), 0, half,
-		 static_cast<uint16_t>(client->height + conf.borderwidth * 2)},
-		{static_cast<int16_t>(client->width + conf.borderwidth), 0, half,
-		 static_cast<uint16_t>(client->height + conf.borderwidth * 2)},
-		{0, static_cast<int16_t>(client->height + conf.borderwidth - half),
-		 static_cast<uint16_t>(client->width + conf.borderwidth * 2), half},
-		{0, static_cast<int16_t>(client->height + conf.borderwidth),
-		 static_cast<uint16_t>(client->width + conf.borderwidth * 2), half},
+		{static_cast<int16_t>(client->width + borderwidth - outer_border), 0, outer_border,
+		 static_cast<uint16_t>(client->height + borderwidth * 2)},
+		{static_cast<int16_t>(client->width + borderwidth), 0, outer_border,
+		 static_cast<uint16_t>(client->height + borderwidth * 2)},
+		{0, static_cast<int16_t>(client->height + borderwidth - outer_border),
+		 static_cast<uint16_t>(client->width + borderwidth * 2), outer_border},
+		{0, static_cast<int16_t>(client->height + borderwidth),
+		 static_cast<uint16_t>(client->width + borderwidth * 2), outer_border},
 		{1, 1, 1, 1}};
 
 	xcb_pixmap_t pmap = xcb_generate_id(conn);
-	xcb_create_pixmap(conn, client->depth, pmap, client->id,
-			  client->width + (conf.borderwidth * 2),
-			  client->height + (conf.borderwidth * 2));
+	xcb_create_pixmap(conn, client->depth, pmap, client->id, client->width + (borderwidth * 2),
+			  client->height + (borderwidth * 2));
 
 	xcb_gcontext_t gc = xcb_generate_id(conn);
 	xcb_create_gc(conn, gc, pmap, 0, nullptr);
 
-	if (inv) {
+	if ((top_win != 0 && client->id == top_win) ^ inverted_colors) {
 		xcb_rectangle_t fake_rect[5];
 
 		for (uint8_t i = 0; i < 5; i++) {
@@ -1735,23 +1704,23 @@ void setborders(Client const* client, const bool isitfocused)
 		}
 	}
 
-	values[0] = conf.outer_border_col;
+	values[0] = outerbordercol;
 
 	if (client->unkillable || client->fixed) {
 		if (client->unkillable && client->fixed)
-			values[0] = conf.fixed_unkil_col;
+			values[0] = fixedunkilcol;
 		else if (client->fixed)
-			values[0] = conf.fixedcol;
+			values[0] = fixedcol;
 		else
-			values[0] = conf.unkillcol;
+			values[0] = unkilcol;
 	}
 
 	xcb_change_gc(conn, gc, XCB_GC_FOREGROUND, &values[0]);
 	xcb_poly_fill_rectangle(conn, pmap, gc, 5, rect_outer);
 
-	values[0] = conf.focuscol;
+	values[0] = focuscol;
 
-	if (!isitfocused) values[0] = conf.unfocuscol;
+	if (!isitfocused) values[0] = unfocuscol;
 
 	xcb_change_gc(conn, gc, XCB_GC_FOREGROUND, &values[0]);
 	xcb_poly_fill_rectangle(conn, pmap, gc, 5, rect_inner);
@@ -1840,13 +1809,14 @@ void maxvert_hor(const Arg* arg)
 
 	getmonsize(1, &mon_x, &mon_y, &mon_width, &mon_height, focuswin);
 	saveorigsize(focuswin);
-	noborder(&temp, focuswin, true);
+
+	uint8_t const bw{focuswin->ignore_borders ? 0 : borderwidth};
 
 	if (arg->i == TWOBWM_MAXIMIZE_VERTICALLY) {
 		focuswin->y = mon_y;
 		/* Compute new height considering height increments
 		 * and screen height. */
-		focuswin->height = mon_height - (conf.borderwidth * 2);
+		focuswin->height = mon_height - (bw * 2);
 
 		/* Move to top of screen and resize. */
 		values[0] = focuswin->y;
@@ -1858,7 +1828,7 @@ void maxvert_hor(const Arg* arg)
 		focuswin->vertmaxed = true;
 	} else if (arg->i == TWOBWM_MAXIMIZE_HORIZONTALLY) {
 		focuswin->x = mon_x;
-		focuswin->width = mon_width - (conf.borderwidth * 2);
+		focuswin->width = mon_width - (bw * 2);
 		values[0] = focuswin->x;
 		values[1] = focuswin->width;
 
@@ -1868,7 +1838,6 @@ void maxvert_hor(const Arg* arg)
 		focuswin->hormaxed = true;
 	}
 
-	noborder(&temp, focuswin, false);
 	raise_current_window();
 	centerpointer(focuswin->id, focuswin);
 	setborders(focuswin, true);
@@ -1883,51 +1852,47 @@ void maxhalf(const Arg* arg)
 	if (nullptr == focuswin || focuswin->maxed) return;
 
 	getmonsize(1, &mon_x, &mon_y, &mon_width, &mon_height, focuswin);
-	noborder(&temp, focuswin, true);
+	uint8_t const bw{focuswin->ignore_borders ? 0 : borderwidth};
 
 	if (arg->i > 4) {
 		if (arg->i > 6) {
 			/* in folding mode */
 			if (arg->i == TWOBWM_MAXHALF_FOLD_VERTICAL)
-				focuswin->height = focuswin->height / 2 - (conf.borderwidth);
+				focuswin->height = focuswin->height / 2 - (bw);
 			else
-				focuswin->height = focuswin->height * 2 + (2 * conf.borderwidth);
+				focuswin->height = focuswin->height * 2 + (2 * bw);
 		} else {
 			focuswin->y = mon_y;
-			focuswin->height = mon_height - (conf.borderwidth * 2);
-			focuswin->width = ((float)(mon_width) / 2) - (conf.borderwidth * 2);
+			focuswin->height = mon_height - (bw * 2);
+			focuswin->width = ((float)(mon_width) / 2) - (bw * 2);
 
 			if (arg->i == TWOBWM_MAXHALF_VERTICAL_LEFT)
 				focuswin->x = mon_x;
 			else
-				focuswin->x = mon_x + mon_width -
-					      (focuswin->width + conf.borderwidth * 2);
+				focuswin->x = mon_x + mon_width - (focuswin->width + bw * 2);
 		}
 	} else {
 		if (arg->i < 2) {
 			/* in folding mode */
 			if (arg->i == TWOBWM_MAXHALF_FOLD_HORIZONTAL)
-				focuswin->width = focuswin->width / 2 - conf.borderwidth;
+				focuswin->width = focuswin->width / 2 - bw;
 			else
-				focuswin->width =
-					focuswin->width * 2 + (2 * conf.borderwidth); // unfold
+				focuswin->width = focuswin->width * 2 + (2 * bw); // unfold
 		} else {
 			focuswin->x = mon_x;
-			focuswin->width = mon_width - (conf.borderwidth * 2);
-			focuswin->height = ((float)(mon_height) / 2) - (conf.borderwidth * 2);
+			focuswin->width = mon_width - (bw * 2);
+			focuswin->height = ((float)(mon_height) / 2) - (bw * 2);
 
 			if (arg->i == TWOBWM_MAXHALF_HORIZONTAL_TOP)
 				focuswin->y = mon_y;
 			else
-				focuswin->y = mon_y + mon_height -
-					      (focuswin->height + conf.borderwidth * 2);
+				focuswin->y = mon_y + mon_height - (focuswin->height + bw * 2);
 		}
 	}
 
 	moveresize(focuswin->id, focuswin->x, focuswin->y, focuswin->width, focuswin->height);
 
 	focuswin->verthor = true;
-	noborder(&temp, focuswin, false);
 	raise_current_window();
 	fitonscreen(focuswin);
 	centerpointer(focuswin->id, focuswin);
@@ -1994,13 +1959,13 @@ void teleport(const Arg* arg)
 	uint16_t tmp_y = focuswin->y;
 
 	getmonsize(1, &mon_x, &mon_y, &mon_width, &mon_height, focuswin);
-	noborder(&temp, focuswin, true);
+	uint8_t const bw{focuswin->ignore_borders ? 0 : borderwidth};
 	focuswin->x = mon_x;
 	focuswin->y = mon_y;
 
 	if (arg->i == TWOBWM_TELEPORT_CENTER) { /* center */
-		focuswin->x += mon_width - (focuswin->width + conf.borderwidth * 2) + mon_x;
-		focuswin->y += mon_height - (focuswin->height + conf.borderwidth * 2) + mon_y;
+		focuswin->x += mon_width - (focuswin->width + bw * 2) + mon_x;
+		focuswin->y += mon_height - (focuswin->height + bw * 2) + mon_y;
 		focuswin->y = focuswin->y / 2;
 		focuswin->x = focuswin->x / 2;
 	} else {
@@ -2008,13 +1973,11 @@ void teleport(const Arg* arg)
 		if (arg->i > 3) {
 			/* bottom-left */
 			if (arg->i == TWOBWM_TELEPORT_BOTTOM_LEFT)
-				focuswin->y +=
-					mon_height - (focuswin->height + conf.borderwidth * 2);
+				focuswin->y += mon_height - (focuswin->height + bw * 2);
 			/* center y */
 			else if (arg->i == TWOBWM_TELEPORT_CENTER_Y) {
 				focuswin->x = tmp_x;
-				focuswin->y += mon_height -
-					       (focuswin->height + conf.borderwidth * 2) + mon_y;
+				focuswin->y += mon_height - (focuswin->height + bw * 2) + mon_y;
 				focuswin->y = focuswin->y / 2;
 			}
 		} else {
@@ -2022,25 +1985,21 @@ void teleport(const Arg* arg)
 			if (arg->i < 2) /* center x */
 				if (arg->i == TWOBWM_TELEPORT_CENTER_X) {
 					focuswin->y = tmp_y;
-					focuswin->x += mon_width -
-						       (focuswin->width + conf.borderwidth * 2) +
-						       mon_x;
+					focuswin->x +=
+						mon_width - (focuswin->width + bw * 2) + mon_x;
 					focuswin->x = focuswin->x / 2;
 				} else
-					focuswin->x += mon_width -
-						       (focuswin->width + conf.borderwidth * 2);
+					focuswin->x += mon_width - (focuswin->width + bw * 2);
 			else {
 				/* bottom-right */
-				focuswin->x += mon_width - (focuswin->width + conf.borderwidth * 2);
-				focuswin->y +=
-					mon_height - (focuswin->height + conf.borderwidth * 2);
+				focuswin->x += mon_width - (focuswin->width + bw * 2);
+				focuswin->y += mon_height - (focuswin->height + bw * 2);
 			}
 		}
 	}
 
 	movewindow(focuswin->id, focuswin->x, focuswin->y);
 	movepointerback(pointx, pointy, focuswin);
-	noborder(&temp, focuswin, false);
 	raise_current_window();
 	xcb_flush(conn);
 }
@@ -2172,7 +2131,7 @@ void handle_keypress(xcb_generic_event_t* e)
 	xcb_keysym_t keysym = xcb_get_keysym(ev->detail);
 
 	for (unsigned int i = 0; i < LENGTH(keys); i++) {
-		if (keysym == keys[i].keysym && CLEANMASK(keys[i].mod) == CLEANMASK(ev->state) &&
+		if (keysym == keys[i].keysym && cleanmask(keys[i].mod) == cleanmask(ev->state) &&
 		    keys[i].func) {
 			keys[i].func(&keys[i].arg);
 			break;
@@ -2300,7 +2259,7 @@ auto Create_Font_Cursor(xcb_connection_t* conn, uint16_t glyph) -> xcb_cursor_t
 
 auto create_back_win() -> std::unique_ptr<Client>
 {
-	uint32_t values[1] = {conf.focuscol};
+	uint32_t values[1] = {focuscol};
 
 	auto id = xcb_generate_id(conn);
 	xcb_create_window(conn,
@@ -2315,7 +2274,7 @@ auto create_back_win() -> std::unique_ptr<Client>
 			  /* width, height */
 			  focuswin->width, focuswin->height,
 			  /* border width */
-			  borders[3],
+			  resize_border,
 			  /* class */
 			  XCB_WINDOW_CLASS_INPUT_OUTPUT,
 			  /* visual */
@@ -2325,7 +2284,7 @@ auto create_back_win() -> std::unique_ptr<Client>
 		values[0] = 1;
 		xcb_change_window_attributes(conn, id, XCB_BACK_PIXMAP_PARENT_RELATIVE, values);
 	} else {
-		values[0] = conf.unfocuscol;
+		values[0] = unfocuscol;
 		xcb_change_window_attributes(conn, id, XCB_CW_BACK_PIXEL, values);
 	}
 
@@ -2446,7 +2405,7 @@ void buttonpress(xcb_generic_event_t* ev)
 	Client const* client;
 	unsigned int i;
 
-	if (!is_sloppy && e->detail == XCB_BUTTON_INDEX_1 && CLEANMASK(e->state) == 0) {
+	if (!is_sloppy && e->detail == XCB_BUTTON_INDEX_1 && cleanmask(e->state) == 0) {
 		// skip if already focused
 		if (nullptr != focuswin && e->event == focuswin->id) { return; }
 		client = findclient(&e->event);
@@ -2460,7 +2419,7 @@ void buttonpress(xcb_generic_event_t* ev)
 
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (buttons[i].func && buttons[i].button == e->detail &&
-		    CLEANMASK(buttons[i].mask) == CLEANMASK(e->state)) {
+		    cleanmask(buttons[i].mask) == cleanmask(e->state)) {
 			if ((focuswin == nullptr) && buttons[i].func == mousemotion) return;
 			if (buttons[i].root_only) {
 				if (e->event == e->root && e->child == 0)
@@ -2798,19 +2757,6 @@ auto setup(int scrno) -> bool
 				  ewmh->_NET_WM_STATE_FULLSCREEN};
 
 	xcb_ewmh_set_supported(ewmh.get(), scrno, LENGTH(net_atoms), net_atoms);
-
-	// Load the default config anyway.
-	conf.borderwidth = borders[1];
-	conf.outer_border = borders[0];
-	conf.focuscol = getcolor(colors[0]);
-	conf.unfocuscol = getcolor(colors[1]);
-	conf.fixedcol = getcolor(colors[2]);
-	conf.unkillcol = getcolor(colors[3]);
-	conf.outer_border_col = getcolor(colors[5]);
-	conf.fixed_unkil_col = getcolor(colors[4]);
-	conf.empty_col = getcolor(colors[6]);
-	conf.inverted_colors = inverted_colors;
-	conf.enable_compton = true;
 
 	for (i = 0; i < NB_ATOMS; i++) ATOM[i] = getatom(atomnames[i][0]);
 
