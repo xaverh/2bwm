@@ -3,6 +3,8 @@
  * Heavily modified version of http://www.hack.org/mc/hacks/mcwm/
  * Copyright (c) 2010, 2011, 2012 Michael Cardell Widerkrantz, mc at the domain hack.org.
  * Copyright (c) 2014, 2020 Patrick Louis, patrick at the domain psychology dot wtf.
+ * Copyright (c) 2019, Veronika Seibt
+ * Copyright (c) 2019-2020, Xaver Hellauer <xaver.hellauer@gmail.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -62,6 +64,11 @@ struct Key {
 	xcb_keysym_t keysym;
 	void (*func)(const Arg*);
 	const Arg arg;
+};
+
+struct Key_combination {
+	int mod;
+	xcb_keysym_t keysym;
 };
 
 struct Button {

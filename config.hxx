@@ -84,19 +84,6 @@ static void toggle_sloppy(const Arg* arg)
  *  XFilterEvent returns: False
  *
  *  The keycode here is keysym 0x1008ff17, so use  0x1008ff17
- *
- *
- * For AZERTY keyboards XK_1...0 should be replaced by :
- *      DESKTOPCHANGE(     XK_ampersand,                     0)
- *      DESKTOPCHANGE(     XK_eacute,                        1)
- *      DESKTOPCHANGE(     XK_quotedbl,                      2)
- *      DESKTOPCHANGE(     XK_apostrophe,                    3)
- *      DESKTOPCHANGE(     XK_parenleft,                     4)
- *      DESKTOPCHANGE(     XK_minus,                         5)
- *      DESKTOPCHANGE(     XK_egrave,                        6)
- *      DESKTOPCHANGE(     XK_underscore,                    7)
- *      DESKTOPCHANGE(     XK_ccedilla,                      8)
- *      DESKTOPCHANGE(     XK_agrave,                        9)*
  */
 #define DESKTOPCHANGE(K, N)                                                                        \
 	{MOD, K, changeworkspace, {.i = N}}, {MOD | SHIFT, K, sendtoworkspace, {.i = N}},
